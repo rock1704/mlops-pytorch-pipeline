@@ -1,5 +1,26 @@
-# Training dependencies - all versions pinned for reproducibility
-torch==2.2.2
-torchvision==0.17.2
+# Training dependencies - all versions pinned for reproducibility.
+#
+# torch/torchvision are pinned to the +cpu builds from PyTorch's own index.
+# The default wheels on PyPI bundle the CUDA runtime (cuDNN alone is 731 MB,
+# cuBLAS 410 MB, ~2.5 GB in total), which this workload never executes: the
+# training Job runs on CPU nodes. Excluding them takes the training image from
+# roughly 7 GB to under 1 GB and makes it possible to build and to side-load
+# into a local cluster. The +cpu local version identifier exists only on the
+# PyTorch index, so this resolves deterministically and cannot silently fall
+# back to the CUDA build from PyPI.
+#
+# For GPU training, drop the +cpu suffix and the extra index.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.2.2+cpu
+torchvision==0.17.2+cpu
+
+# torch 2.2.2 is compiled against the NumPy 1.x C ABI. NumPy is not a direct
+# dependency here - torchvision pulls it in - so leaving it unpinned resolves to
+# 2.x and every call crossing the boundary (ToTensor -> torch.from_numpy) fails
+# at runtime with "RuntimeError: Numpy is not available". Pinning it in the
+# requirements is what makes the *image* correct; pinning it only in CI would
+# leave the container broken.
+numpy==1.26.4
 pyyaml==6.0.1
 tqdm==4.66.4
