@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cifar10-training
+  namespace: ml-training
+  labels:
+    app: cifar10-trainer
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: cifar10-trainer
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: trainer
+          image: rock1704/mlops-train:v1
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+              # --- Bonus: GPU support ---
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/configs
+            - name: data-volume
+              mountPath: /app/data
+            - name: checkpoint-volume
+              mountPath: /app/checkpoints
+      volumes:
+        - name: config-volume
+          configMap:
+            name: training-config
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: cifar10-data
+        - name: checkpoint-volume
+          persistentVolumeClaim:
+            claimName: model-checkpoints
+      # --- Bonus: GPU node selector & toleration ---
+      nodeSelector:
+        accelerator: nvidia-gpu
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
