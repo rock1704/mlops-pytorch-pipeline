@@ -21,7 +21,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements/train.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements/*.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -29,10 +29,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements/train.txt
-          pip install pytest ruff pillow numpy
+          pip install -r requirements/serve.txt
+          # ruff and pytest are pinned so CI and local runs agree; an
+          # unpinned ruff silently changed its default rule set and broke CI.
+          pip install pytest==9.1.1 ruff==0.16.4 pillow numpy
 
       - name: Lint with ruff
         run: ruff check src/ tests/
+
+      - name: Verify the serving app imports
+        run: python -c "import sys; sys.path.insert(0, 'src'); import serve; print(serve.app.title)"
 
       - name: Run unit tests
         run: pytest tests/ -v --tb=short

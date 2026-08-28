@@ -8,13 +8,15 @@ import sys
 from pathlib import Path
 
 import torch
-import torch.nn as nn
 import yaml
+from torch import nn
 
-# Allow running from src/ or from project root
+# train.py is executed as `python src/train.py`, so src/ is already on
+# sys.path; the insert keeps imports working when it is invoked from elsewhere.
 sys.path.insert(0, str(Path(__file__).parent))
-from dataset import get_dataloaders
-from model import get_model
+
+from dataset import get_dataloaders  # noqa: E402
+from model import get_model  # noqa: E402
 
 
 def load_config(config_path: str) -> dict:
@@ -155,7 +157,10 @@ def main() -> None:
                 print(json.dumps({"event": "early_stopping", "epoch": epoch + 1}), flush=True)
                 break
 
-    print(json.dumps({"event": "training_complete", "best_val_loss": round(best_val_loss, 4)}), flush=True)
+    print(
+        json.dumps({"event": "training_complete", "best_val_loss": round(best_val_loss, 4)}),
+        flush=True,
+    )
 
 
 if __name__ == "__main__":
