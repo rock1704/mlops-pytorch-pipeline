@@ -1,0 +1,31 @@
+# =============================================================
+# Stage 1 — base: install all training dependencies
+# =============================================================
+FROM python:3.11-slim AS base
+
+WORKDIR /app
+
+# Install system deps needed to build some Python packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+        libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first to leverage Docker layer caching
+COPY requirements/train.txt requirements/train.txt
+RUN pip install --no-cache-dir -r requirements/train.txt
+
+# =============================================================
+# Stage 2 — training: copy application code
+# =============================================================
+FROM base AS training
+
+# Copy source code and default config
+COPY src/ ./src/
+COPY configs/ ./configs/
+
+# Ensure Python output is unbuffered (so JSON logs stream in real-time)
+ENV PYTHONUNBUFFERED=1
+
+# The config file can be overridden by mounting a ConfigMap volume at /app/configs
+ENTRYPOINT ["python", "src/train.py"]

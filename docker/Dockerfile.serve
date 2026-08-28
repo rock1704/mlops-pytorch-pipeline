@@ -1,0 +1,36 @@
+# Model serving image — inference only, no training libraries
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install minimal system libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user for security
+RUN useradd --create-home --shell /bin/bash appuser
+
+# Install inference-only dependencies
+COPY requirements/serve.txt requirements/serve.txt
+RUN pip install --no-cache-dir -r requirements/serve.txt
+
+# Copy only the source files needed for inference
+COPY src/serve.py ./src/serve.py
+COPY src/model.py ./src/model.py
+
+# Switch to non-root user
+USER appuser
+
+# Expose the serving port
+EXPOSE 8080
+
+ENV PYTHONUNBUFFERED=1
+
+# Health check: Kubernetes also has its own probes, but this gives
+# Docker-native health visibility
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+CMD ["uvicorn", "src.serve:app", "--host", "0.0.0.0", "--port", "8080"]

@@ -1,0 +1,25 @@
+# PersistentVolumeClaim for the CIFAR-10 dataset download cache
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cifar10-data
+  namespace: ml-training
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+# PersistentVolumeClaim for model checkpoints (shared between training and serving)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-checkpoints
+  namespace: ml-training
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
