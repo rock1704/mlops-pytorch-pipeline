@@ -1,0 +1,26 @@
+# Lint configuration for the CIFAR-10 MLOps pipeline.
+#
+# The rule set is selected explicitly rather than relying on ruff's defaults,
+# because those defaults change between ruff releases. CI pins the ruff version
+# (see .github/workflows/ci.yml) so local and CI results always agree.
+
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort - import ordering
+    "B",   # flake8-bugbear - likely bugs
+    "UP",  # pyupgrade - modern syntax
+]
+
+[lint.per-file-ignores]
+# FastAPI's dependency-injection API is expressed through function-call
+# defaults (`= File(...)`), which B008 flags by design. It is the documented
+# and only supported way to declare an upload parameter.
+"src/serve.py" = ["B008"]
+
+[lint.isort]
+known-first-party = ["model", "dataset"]

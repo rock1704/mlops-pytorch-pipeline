@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements first to leverage Docker layer caching
 COPY requirements/train.txt requirements/train.txt
-RUN pip install --no-cache-dir -r requirements/train.txt
+# --timeout/--retries survive slow links; the wheels are still large.
+RUN pip install --no-cache-dir --timeout 120 --retries 5 -r requirements/train.txt
 
 # =============================================================
 # Stage 2 — training: copy application code

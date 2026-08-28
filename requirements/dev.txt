@@ -1,0 +1,8 @@
+# Development / CI dependencies - pinned so local and CI runs agree.
+# Pulls in the inference deps so the serving app can be imported in tests.
+-r serve.txt
+
+pytest==9.1.1
+ruff==0.16.4
+
+# numpy is pinned in serve.txt, which this file includes.

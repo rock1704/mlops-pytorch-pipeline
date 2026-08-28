@@ -6,6 +6,7 @@ Endpoints:
 """
 import io
 import os
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -17,10 +18,11 @@ from fastapi.responses import JSONResponse
 from PIL import Image
 from torchvision import transforms
 
-import sys
+# uvicorn loads this module as `src.serve`, so src/ is not on sys.path by
+# default. Add it so the sibling `model` module resolves in the container.
 sys.path.insert(0, str(Path(__file__).parent))
-from model import get_model
 
+from model import get_model  # noqa: E402
 
 # CIFAR-10 class labels
 CIFAR10_CLASSES = [
@@ -116,7 +118,7 @@ async def predict(image: UploadFile = File(...)) -> JSONResponse:
             "confidence": round(probabilities[predicted_idx], 4),
             "probabilities": {
                 cls: round(prob, 4)
-                for cls, prob in zip(CIFAR10_CLASSES, probabilities)
+                for cls, prob in zip(CIFAR10_CLASSES, probabilities, strict=True)
             },
         }
     )

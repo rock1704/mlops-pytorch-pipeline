@@ -40,6 +40,8 @@ A production-style MLOps pipeline for CIFAR-10 image classification using **PyTo
 ```
 mlops-pytorch-pipeline/
 ├── .github/workflows/ci.yml       # GitHub Actions: lint, test, Docker build
+├── .dockerignore                  # Keeps the build context small
+├── ruff.toml                      # Pinned lint rule set
 ├── configs/
 │   └── training_config.yaml       # Hyperparameters (read by train.py)
 ├── docker/
@@ -48,8 +50,10 @@ mlops-pytorch-pipeline/
 ├── k8s/
 │   ├── namespace.yaml
 │   ├── configmap.yaml
+│   ├── secret.yaml                # Credential shape (placeholders only)
 │   ├── pvc.yaml                   # PVCs for data & checkpoints
-│   ├── training-job.yaml          # K8s Job (+ GPU bonus)
+│   ├── training-job.yaml          # K8s Job (CPU - the default)
+│   ├── training-job-gpu.yaml      # K8s Job (GPU bonus variant)
 │   ├── serving-deployment.yaml    # 2-replica deployment with probes
 │   ├── serving-service.yaml       # ClusterIP service
 │   └── hpa.yaml                   # HorizontalPodAutoscaler
@@ -154,8 +158,16 @@ Example response:
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/pvc.yaml
 kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/secret.yaml       # placeholders - see note below
 kubectl apply -f k8s/training-job.yaml
 ```
+
+> **GPU (bonus):** on a cluster with GPU nodes and the NVIDIA device plugin,
+> apply `k8s/training-job-gpu.yaml` *instead of* `k8s/training-job.yaml`. It is
+> a separate file on purpose: it carries `nvidia.com/gpu: 1`, a
+> `accelerator=nvidia-gpu` node selector and a GPU toleration, none of which any
+> node on a local single-node cluster satisfies, so that Job would sit `Pending`
+> forever. The CPU manifest is the default so the pipeline runs anywhere.
 
 ### 2. Watch training job progress
 ```bash
@@ -204,3 +216,42 @@ Edit `configs/training_config.yaml` to adjust hyperparameters:
 | `training.batch_size` | `64` | Samples per mini-batch |
 | `training.learning_rate` | `0.001` | Adam optimizer LR |
 | `training.early_stopping_patience` | `3` | Epochs without improvement before stopping |
+
+Paths in `configs/training_config.yaml` are relative (`data`, `checkpoints`), so
+the same file works when running locally from the repo root and inside the
+container (where `WORKDIR` is `/app`). On Kubernetes the file is overridden
+entirely by the `training-config` ConfigMap mounted at `/app/configs`, which
+uses absolute paths.
+
+## Secrets
+
+`k8s/secret.yaml` is committed with **placeholder values only** so the shape of
+the Secret is reviewable, exactly as `configmap.yaml` documents the config
+shape. Real credentials are never committed - `.gitignore` excludes `.env`,
+`*.key` and `secrets/`. Create the real Secret out-of-band:
+
+```bash
+kubectl create secret generic ml-pipeline-secrets   --namespace ml-training   --from-literal=DATA_MIRROR_TOKEN="$DATA_MIRROR_TOKEN"   --from-literal=METRICS_API_KEY="$METRICS_API_KEY"
+```
+
+Both the training Job and the serving Deployment reference it through
+`envFrom.secretRef` with `optional: true`, so the pipeline still runs end to end
+on a cluster where the Secret was never created.
+
+## Operational notes
+
+- **Image availability.** The manifests reference `rock1704/mlops-train:v1` and
+  `rock1704/mlops-serve:v1` with `imagePullPolicy: IfNotPresent`. Push them to a
+  registry, or side-load them into the local cluster
+  (`minikube image load mlops-train:v1`), or pods will `ImagePullBackOff`.
+- **PVC access mode.** `model-checkpoints` is `ReadWriteOnce`, and it is mounted
+  by the training Job and by both serving replicas. That works on a single-node
+  cluster because every pod lands on the same node. A multi-node cluster needs
+  `ReadWriteMany` and a storage class that supports it (NFS, EFS, Longhorn).
+- **Startup ordering.** The serving container loads its checkpoint at startup
+  and exits if the file is absent, so serving pods will `CrashLoopBackOff` until
+  the training Job has written `classifier_v1.pt` to the PVC. Deploy the serving
+  layer after the Job reports `Completed`, as in the steps above.
+- **HPA.** `k8s/hpa.yaml` targets CPU and memory utilisation, which requires
+  `metrics-server` in the cluster (`minikube addons enable metrics-server`).
+  Without it the HPA reports `<unknown>` targets and will not scale.

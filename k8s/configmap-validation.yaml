@@ -1,0 +1,38 @@
+# Fast validation variant of the training ConfigMap.
+#
+# Apply this INSTEAD OF k8s/configmap.yaml when the goal is to demonstrate that
+# the pipeline runs end to end rather than to train a converged model. It is the
+# same object name, so applying it replaces the data of `training-config`.
+#
+#   kubectl apply -f k8s/configmap-validation.yaml
+#
+# The only differences from configmap.yaml are epochs (2 instead of 10) and the
+# early-stopping patience that follows from it. A full 10-epoch ResNet-18 run on
+# the 2 CPU cores the Job requests takes several hours; 2 epochs completes in
+# minutes and still exercises every step - dataset download, training loop, JSON
+# metric logging, checkpoint write to the PVC, and the serving container loading
+# that checkpoint.
+#
+# A model trained this way is NOT converged and its predictions are barely better
+# than chance. That is expected and intended for a validation run.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: training-config
+  namespace: ml-training
+data:
+  training_config.yaml: |
+    model:
+      architecture: resnet18
+      num_classes: 10
+    training:
+      epochs: 2
+      batch_size: 64
+      learning_rate: 0.001
+      early_stopping_patience: 2
+    data:
+      dataset: cifar10
+      data_dir: /app/data
+    output:
+      checkpoint_dir: /app/checkpoints
+      model_name: classifier_v1.pt

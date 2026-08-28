@@ -1,28 +1,35 @@
-# CPU-only training Job. This is the default so the pipeline schedules on a
-# local single-node cluster (Minikube, kind, Docker Desktop).
+# Bonus: GPU-accelerated training Job.
 #
-# For the GPU variant see k8s/training-job-gpu.yaml.
+# Identical to k8s/training-job.yaml except that it requests one NVIDIA GPU and
+# targets GPU nodes. Apply this INSTEAD OF training-job.yaml on a cluster with
+# GPU nodes and the NVIDIA device plugin installed:
+#
+#   kubectl apply -f k8s/training-job-gpu.yaml
+#
+# On a local single-node cluster there is no node carrying the
+# accelerator=nvidia-gpu label, so this Job's pod stays Pending forever. That
+# is why the CPU variant is the default.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: cifar10-training
+  name: cifar10-training-gpu
   namespace: ml-training
   labels:
     app: cifar10-trainer
+    accelerator: nvidia-gpu
 spec:
   backoffLimit: 2
   template:
     metadata:
       labels:
         app: cifar10-trainer
+        accelerator: nvidia-gpu
     spec:
       restartPolicy: Never
       containers:
         - name: trainer
           image: rock1704/mlops-train:v1
           imagePullPolicy: IfNotPresent
-          # Optional credentials (dataset mirror, experiment tracker).
-          # optional: true keeps the Job schedulable when the Secret is absent.
           envFrom:
             - secretRef:
                 name: ml-pipeline-secrets
@@ -31,9 +38,11 @@ spec:
             requests:
               cpu: "2"
               memory: "4Gi"
+              nvidia.com/gpu: "1"
             limits:
               cpu: "2"
               memory: "4Gi"
+              nvidia.com/gpu: "1"
           volumeMounts:
             - name: config-volume
               mountPath: /app/configs
@@ -51,3 +60,10 @@ spec:
         - name: checkpoint-volume
           persistentVolumeClaim:
             claimName: model-checkpoints
+      # Schedule only on GPU nodes, and tolerate the taint they usually carry.
+      nodeSelector:
+        accelerator: nvidia-gpu
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
