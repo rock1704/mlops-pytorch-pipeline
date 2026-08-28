@@ -1,0 +1,50 @@
+# Keep the build context small and reproducible.
+# Only src/, configs/ and requirements/ are needed by the Dockerfiles.
+
+# Version control
+.git/
+.github/
+.gitignore
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# ML artifacts - never bake data or weights into an image
+data/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+mlruns/
+wandb/
+
+# Not needed at build or run time
+k8s/
+tests/
+docs/
+*.md
+*.pdf
+LICENSE
+
+# Secrets
+.env
+.env.*
+*.key
+secrets/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
