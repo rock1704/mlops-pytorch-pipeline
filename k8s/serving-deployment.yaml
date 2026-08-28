@@ -29,6 +29,12 @@ spec:
           env:
             - name: CHECKPOINT_PATH
               value: /app/checkpoints/classifier_v1.pt
+          # Optional credentials; optional: true keeps pods schedulable when
+          # the Secret has not been created on this cluster.
+          envFrom:
+            - secretRef:
+                name: ml-pipeline-secrets
+                optional: true
           resources:
             requests:
               cpu: "500m"
