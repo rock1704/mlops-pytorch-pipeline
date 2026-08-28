@@ -29,10 +29,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements/train.txt
-          pip install -r requirements/serve.txt
-          # ruff and pytest are pinned so CI and local runs agree; an
-          # unpinned ruff silently changed its default rule set and broke CI.
-          pip install pytest==9.1.1 ruff==0.16.4 pillow numpy
+          # dev.txt pulls in serve.txt and pins pytest, ruff and numpy. Every
+          # CI-only dependency was previously unpinned, which is how an
+          # unannounced ruff rule-set change and a NumPy 2.x ABI break both
+          # landed in CI without any change to this repository.
+          pip install -r requirements/dev.txt
 
       - name: Lint with ruff
         run: ruff check src/ tests/
