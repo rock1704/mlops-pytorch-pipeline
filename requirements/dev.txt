@@ -5,9 +5,4 @@
 pytest==9.1.1
 ruff==0.16.4
 
-# torch 2.2.2 is compiled against the NumPy 1.x C ABI. Installing NumPy 2.x
-# alongside it leaves torch unable to initialise NumPy, and any call that
-# crosses the boundary (torchvision's ToTensor -> torch.from_numpy) fails at
-# runtime with "RuntimeError: Numpy is not available". Keep this below 2.0
-# for as long as torch is pinned to 2.2.2.
-numpy==1.26.4
+# numpy is pinned in serve.txt, which this file includes.
