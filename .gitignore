@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -36,9 +36,6 @@ checkpoints/
 *.pkl
 mlruns/
 wandb/
-
-# Docker build context extras
-.dockerignore
 
 # Secrets & environment variables
 .env
