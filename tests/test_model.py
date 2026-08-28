@@ -2,14 +2,14 @@
 import sys
 from pathlib import Path
 
-import torch
 import pytest
+import torch
 
 # Make src/ importable without installation
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from model import get_model
-from dataset import get_transforms
+from dataset import get_transforms  # noqa: E402
+from model import get_model  # noqa: E402
 
 
 class TestGetModel:
@@ -35,7 +35,7 @@ class TestGetModel:
 
     def test_cifar_stem_modification(self):
         """Verify the CIFAR stem: conv1 should be 3x3, maxpool should be Identity."""
-        import torch.nn as nn
+        from torch import nn
         model = get_model("resnet18", num_classes=10)
         assert model.conv1.kernel_size == (3, 3), "Stem conv should be 3x3 for CIFAR-10"
         assert model.conv1.stride == (1, 1), "Stem conv stride should be 1 for CIFAR-10"
@@ -47,8 +47,8 @@ class TestGetTransforms:
 
     def test_train_transform_returns_tensor(self):
         """Training transform pipeline should return a 3x32x32 tensor."""
-        from PIL import Image
         import numpy as np
+        from PIL import Image
 
         transform = get_transforms(train=True)
         img = Image.fromarray(np.zeros((32, 32, 3), dtype="uint8"))
@@ -57,8 +57,8 @@ class TestGetTransforms:
 
     def test_val_transform_returns_tensor(self):
         """Validation transform pipeline should return a 3x32x32 tensor."""
-        from PIL import Image
         import numpy as np
+        from PIL import Image
 
         transform = get_transforms(train=False)
         img = Image.fromarray(np.zeros((32, 32, 3), dtype="uint8"))

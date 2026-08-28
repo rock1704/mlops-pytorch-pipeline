@@ -2,7 +2,7 @@
 
 Supports ResNet-18 from torchvision with modifications for 32x32 input images.
 """
-import torch.nn as nn
+from torch import nn
 from torchvision import models
 
 
