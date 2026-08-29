@@ -7,7 +7,7 @@ torchvision==0.17.2+cpu
 # See train.txt: torch 2.2.2 needs the NumPy 1.x ABI.
 numpy==1.26.4
 fastapi==0.111.0
-uvicorn[standard]==0.30.1
+uvicorn[standard]==0.52.4
 pillow==10.3.0
 python-multipart==0.0.9
 pyyaml==6.0.1
