@@ -20,6 +20,47 @@ spec:
       labels:
         app: model-serving
     spec:
+      # The serving container loads its checkpoint at startup and exits if the
+      # file is absent, so without this the pods CrashLoopBackOff until the
+      # training Job has written one. Waiting in an init container turns that
+      # into a clean Init:0/1, which reads as "blocked on a dependency" rather
+      # than "broken", and costs no restart counters.
+      #
+      # This reuses the serving image rather than pulling busybox: the pod
+      # already requires that image, so there is no extra pull to fail on a
+      # cluster where images are side-loaded rather than fetched from a registry.
+      initContainers:
+        - name: wait-for-checkpoint
+          image: rock1704/mlops-serve:v1
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              echo "waiting for $CHECKPOINT_PATH"
+              waited=0
+              until [ -f "$CHECKPOINT_PATH" ]; do
+                sleep 5
+                waited=$((waited + 5))
+                # Periodic heartbeat so `kubectl logs -c wait-for-checkpoint`
+                # shows progress instead of appearing hung.
+                [ $((waited % 60)) -eq 0 ] && echo "still waiting (${waited}s)"
+              done
+              echo "checkpoint found after ${waited}s"
+          env:
+            - name: CHECKPOINT_PATH
+              value: /app/checkpoints/classifier_v1.pt
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+          volumeMounts:
+            - name: checkpoint-volume
+              mountPath: /app/checkpoints
+              readOnly: true
       containers:
         - name: serving
           image: rock1704/mlops-serve:v1
