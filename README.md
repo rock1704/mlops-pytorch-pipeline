@@ -248,10 +248,17 @@ on a cluster where the Secret was never created.
   by the training Job and by both serving replicas. That works on a single-node
   cluster because every pod lands on the same node. A multi-node cluster needs
   `ReadWriteMany` and a storage class that supports it (NFS, EFS, Longhorn).
-- **Startup ordering.** The serving container loads its checkpoint at startup
-  and exits if the file is absent, so serving pods will `CrashLoopBackOff` until
-  the training Job has written `classifier_v1.pt` to the PVC. Deploy the serving
-  layer after the Job reports `Completed`, as in the steps above.
+- **Startup ordering.** The serving container loads its checkpoint at startup and
+  exits if the file is absent. A `wait-for-checkpoint` init container blocks until
+  `classifier_v1.pt` appears on the PVC, so pods sit in `Init:0/1` instead of
+  crash-looping if the serving layer is applied before the training Job finishes.
+  Follow its progress with:
+  ```bash
+  kubectl logs -f -l app=model-serving -c wait-for-checkpoint -n ml-training
+  ```
+  Applying the serving layer after the Job reports `Completed` is still the
+  cleaner order; the init container makes the other order survivable rather than
+  making it correct.
 - **HPA.** `k8s/hpa.yaml` targets CPU and memory utilisation, which requires
   `metrics-server` in the cluster (`minikube addons enable metrics-server`).
   Without it the HPA reports `<unknown>` targets and will not scale.
