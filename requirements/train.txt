@@ -21,6 +21,6 @@ torchvision==0.17.2+cpu
 # at runtime with "RuntimeError: Numpy is not available". Pinning it in the
 # requirements is what makes the *image* correct; pinning it only in CI would
 # leave the container broken.
-numpy==1.26.4
+numpy==2.5.2
 pyyaml==6.0.1
 tqdm==4.66.4
