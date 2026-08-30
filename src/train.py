@@ -105,6 +105,8 @@ def main() -> None:
     train_loader, val_loader = get_dataloaders(
         data_dir=config["data"]["data_dir"],
         batch_size=config["training"]["batch_size"],
+        # Optional: omitted from the config means "derive from the device".
+        num_workers=config["data"].get("num_workers"),
     )
 
     optimizer = torch.optim.Adam(

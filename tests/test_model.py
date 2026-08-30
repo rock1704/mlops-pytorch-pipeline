@@ -8,7 +8,7 @@ import torch
 # Make src/ importable without installation
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from dataset import get_transforms  # noqa: E402
+from dataset import get_transforms, resolve_loader_settings  # noqa: E402
 from model import get_model  # noqa: E402
 
 
@@ -70,3 +70,29 @@ class TestGetTransforms:
         train_t = get_transforms(train=True)
         val_t = get_transforms(train=False)
         assert len(train_t.transforms) > len(val_t.transforms)
+
+
+class TestResolveLoaderSettings:
+    """The DataLoader knobs must follow the device, not a hardcoded GPU guess."""
+
+    def test_cpu_defaults_avoid_worker_contention(self, monkeypatch):
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+        num_workers, pin_memory = resolve_loader_settings()
+        assert num_workers == 0, "workers contend with training for the same cores"
+        assert pin_memory is False, "no device to stage transfers to"
+
+    def test_cuda_defaults_enable_overlap(self, monkeypatch):
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+        num_workers, pin_memory = resolve_loader_settings()
+        assert num_workers == 2
+        assert pin_memory is True
+
+    def test_explicit_values_win_over_derived_ones(self, monkeypatch):
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+        assert resolve_loader_settings(num_workers=4, pin_memory=True) == (4, True)
+
+    def test_zero_workers_is_respected_not_treated_as_unset(self, monkeypatch):
+        """0 is falsy, so a `not num_workers` check here would be a bug."""
+        monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+        num_workers, _ = resolve_loader_settings(num_workers=0)
+        assert num_workers == 0

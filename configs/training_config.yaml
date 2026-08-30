@@ -21,6 +21,8 @@ training:
 data:
   dataset: cifar10
   data_dir: data
+  # Omit to derive from the device; 0 suits the CPU-only Job.
+  num_workers: 0
 
 output:
   checkpoint_dir: checkpoints
