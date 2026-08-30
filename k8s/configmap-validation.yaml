@@ -33,6 +33,8 @@ data:
     data:
       dataset: cifar10
       data_dir: /app/data
+      # Omit to derive from the device; 0 suits the CPU-only Job.
+      num_workers: 0
     output:
       checkpoint_dir: /app/checkpoints
       model_name: classifier_v1.pt
